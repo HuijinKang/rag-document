@@ -1,3 +1,33 @@
 spring:
   application:
     name: rag-document
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ragdocument
+    username: raguser
+    password: ragpass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
+# OpenAI
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: gpt-4o
+  embedding-model: text-embedding-3-small
+
+# Milvus
+milvus:
+  host: localhost
+  port: 19530
+
+# Slack
+slack:
+  bot-token: ${SLACK_BOT_TOKEN}
+  signing-secret: ${SLACK_SIGNING_SECRET}
