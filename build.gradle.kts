@@ -20,6 +20,12 @@ repositories {
     mavenCentral()
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("io.grpc:grpc-netty-shaded:1.75.0")
+    }
+}
+
 dependencies {
     // Spring
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -38,19 +44,8 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:5.5.1")
     implementation("org.jsoup:jsoup:1.18.1")
 
-    // Milvus (불필요한 Bulk Writer 의존성 제외 - Hadoop, Parquet 등 CVE 다수)
-    implementation("io.milvus:milvus-sdk-java:2.6.13") {
-        exclude(group = "org.apache.hadoop")
-        exclude(group = "org.apache.parquet")
-        exclude(group = "org.apache.avro")
-        exclude(group = "io.minio")
-        exclude(group = "io.airlift", module = "aircompressor")
-        exclude(group = "com.azure", module = "azure-identity")
-        exclude(group = "com.azure", module = "azure-storage-blob")
-        exclude(group = "com.amazonaws")
-        exclude(group = "com.aliyun.oss")
-        exclude(group = "com.tencentcloudapi")
-    }
+    // Milvus (2.5.2부터 코어/BulkWriter 분리 → 코어만 사용)
+    implementation("io.milvus:milvus-sdk-java:2.6.13")
 
     // Slack
     implementation("com.slack.api:bolt-jakarta-servlet:1.45.3")
