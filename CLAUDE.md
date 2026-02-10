@@ -122,6 +122,8 @@ AI 기반 문서 요약 & Q&A 시스템 (RAG)
 - **Repository/Client 인터페이스는 Domain에, 구현체는 Infrastructure에 둔다.** (DIP 적용)
 - **Domain Service(전략 객체)는 엔티티 하나에 넣기 어려운 순수 로직일 때만 사용한다.** (예: 청크 분할 알고리즘)
 - **비즈니스 로직은 가능한 한 도메인 엔티티 안에 둔다.** (Rich Domain Model)
+- **Deprecated된 메서드/함수는 사용하지 않는다.** 라이브러리의 최신 API를 확인하고 대체 메서드를 사용한다.
+- **DTO는 별도 dto 패키지에 분리한다.** Presentation DTO는 `presentation/dto/`, Infrastructure DTO는 `infrastructure/dto/`에 둔다.
 
 ### Facade 흐름 예시
 

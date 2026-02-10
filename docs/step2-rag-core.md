@@ -247,6 +247,7 @@ class MilvusVectorStore(
 
     override fun search(queryEmbedding: List<Float>, topK: Int): List<VectorSearchResult> {
         // Milvus에서 유사도 검색 (코사인 유사도)
+        // SearchReq.builder().limit(topK) 사용 (topK()는 deprecated)
         // VectorSearchResult 리스트 반환
     }
 }

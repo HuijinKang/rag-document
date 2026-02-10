@@ -112,7 +112,7 @@ class MilvusVectorStore(
             SearchReq.builder()
                 .collectionName(collectionName)
                 .data(listOf(FloatVec(queryEmbedding)))
-                .topK(topK)
+                .limit(topK.toLong())
                 .outputFields(listOf("chunk_id"))
                 .build()
         )
