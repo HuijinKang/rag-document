@@ -13,7 +13,7 @@ AI 기반 문서 요약 & Q&A 시스템 (RAG)
 | 구분 | 기술 | 비고 |
 |---|---|---|
 | 언어 | Kotlin | |
-| 프레임워크 | Spring Boot | |
+| 프레임워크 | Spring Boot 4.0.2 | Java 21 |
 | AI (생성) | OpenAI API (GPT-4o) | 질문 답변, 요약 생성 |
 | AI (임베딩) | OpenAI API (text-embedding-3-small) | 텍스트 → 벡터 변환 |
 | 벡터 DB | Milvus | Docker, 셀프 호스팅 |
@@ -104,8 +104,7 @@ AI 기반 문서 요약 & Q&A 시스템 (RAG)
 ## 아키텍처
 
 - **DDD (Domain-Driven Design)** 기반 도메인 패키지 분리
-- **Layered Architecture**: Presentation → Facade → Application(Service) → Domain → Infrastructure
-- **Facade 계층**: 여러 서비스를 조합하는 유스케이스 단위의 진입점
+- **Layered Architecture**: Presentation → Application(Facade) → Domain → Infrastructure
 
 ### 레이어 역할
 
@@ -113,15 +112,15 @@ AI 기반 문서 요약 & Q&A 시스템 (RAG)
 |---|---|---|---|
 | Presentation | 외부 요청 수신 (API, Slack 이벤트) | ❌ | SlackEventController |
 | Application (Facade) | 유스케이스 오케스트레이션, 흐름 제어, Repository 호출 | ✅ | DocumentFacade, RagFacade |
-| Domain | 엔티티, 값 객체, 도메인 서비스 (순수 비즈니스 규칙) | ❌ | Document, Chunk, ChunkingStrategy |
+| Domain | 엔티티, 값 객체, 도메인 전략 객체, Repository/Client 인터페이스 (순수 비즈니스 규칙) | ❌ | Document, Chunk, ChunkingStrategy |
 | Infrastructure | Repository 구현체, 외부 API 연동 | - | DocumentJpaRepository, OpenAiClient |
 
 ### 아키텍처 규칙
 
 - **Domain은 어디에도 의존하지 않는다.** 순수 비즈니스 로직만 담당한다.
 - **Application(Facade)이 Repository를 호출한다.** 유스케이스 흐름 제어와 영속성 처리를 담당한다.
-- **Repository 인터페이스는 Domain에, 구현체는 Infrastructure에 둔다.** (DIP 적용)
-- **Domain Service는 엔티티 하나에 넣기 어려운 순수 로직일 때만 사용한다.** (예: 청크 분할 알고리즘)
+- **Repository/Client 인터페이스는 Domain에, 구현체는 Infrastructure에 둔다.** (DIP 적용)
+- **Domain Service(전략 객체)는 엔티티 하나에 넣기 어려운 순수 로직일 때만 사용한다.** (예: 청크 분할 알고리즘)
 - **비즈니스 로직은 가능한 한 도메인 엔티티 안에 둔다.** (Rich Domain Model)
 
 ### Facade 흐름 예시
@@ -148,10 +147,21 @@ RagFacade.ask() (Application)
   chatClient.generate(chunks, question)→ GPT 답변 생성 (Infrastructure)
 ```
 
-## 프로젝트 구조 (예정)
+---
+
+## 프로젝트 구조
 
 ```
 rag-document/
+├── CLAUDE.md
+├── docs/
+│   ├── step1-setup.md
+│   ├── step2-rag-core.md
+│   ├── step3-qa.md
+│   ├── step4-slack-bot.md
+│   ├── step5-document-parsing.md
+│   ├── step6-extra-features.md
+│   └── step7-deploy.md
 ├── docker-compose.yml
 ├── build.gradle.kts
 ├── src/main/kotlin/com/khj/ragdocument/
@@ -161,6 +171,7 @@ rag-document/
 │   │   │   ├── Document.kt                #   엔티티 (비즈니스 로직 포함)
 │   │   │   ├── Chunk.kt                   #   값 객체
 │   │   │   ├── DocumentRepository.kt      #   리포지토리 인터페이스
+│   │   │   ├── ChunkRepository.kt         #   청크 리포지토리 인터페이스
 │   │   │   └── ChunkingStrategy.kt        #   도메인 전략 객체 (청크 분할 순수 로직)
 │   │   ├── application/
 │   │   │   └── DocumentFacade.kt          #   유스케이스 조합 + Repository 호출
@@ -188,11 +199,12 @@ rag-document/
 │   ├── rag/                               # 📂 도메인: RAG (질의응답)
 │   │   ├── domain/
 │   │   │   ├── Answer.kt                  #   답변 값 객체
-│   │   │   └── SearchResult.kt            #   검색 결과 값 객체
+│   │   │   ├── SearchResult.kt            #   검색 결과 값 객체
+│   │   │   └── ChatClient.kt             #   채팅 클라이언트 인터페이스 (DIP)
 │   │   ├── application/
 │   │   │   └── RagFacade.kt               #   질문→검색→답변 유스케이스 조합
 │   │   └── infrastructure/
-│   │       └── OpenAiChatClient.kt        #   OpenAI Chat API 호출
+│   │       └── OpenAiChatClient.kt        #   OpenAI Chat API 구현체
 │   │
 │   ├── slack/                             # 📂 도메인: Slack 연동
 │   │   ├── presentation/
