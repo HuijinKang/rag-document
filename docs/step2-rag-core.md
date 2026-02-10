@@ -178,8 +178,13 @@ class OpenAiEmbeddingClient(
             .map { it.embedding }
     }
 }
+```
 
-// 응답 DTO
+**패키지**: `com.khj.ragdocument.embedding.infrastructure.dto`
+
+#### EmbeddingResponse.kt (응답 DTO)
+
+```kotlin
 data class EmbeddingResponse(
     val data: List<EmbeddingData>,
 )
@@ -316,12 +321,22 @@ class DocumentController(
         return DocumentIngestResponse(documentId = documentId, message = "문서 분석 완료")
     }
 }
+```
 
+**패키지**: `com.khj.ragdocument.document.presentation.dto`
+
+#### DocumentIngestRequest.kt
+
+```kotlin
 data class DocumentIngestRequest(
     val title: String,
     val content: String,
 )
+```
 
+#### DocumentIngestResponse.kt
+
+```kotlin
 data class DocumentIngestResponse(
     val documentId: Long,
     val message: String,

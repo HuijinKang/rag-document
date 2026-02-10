@@ -170,31 +170,35 @@ rag-document/
 │   │   ├── domain/
 │   │   │   ├── Document.kt                #   엔티티 (비즈니스 로직 포함)
 │   │   │   ├── Chunk.kt                   #   값 객체
+│   │   │   ├── SourceType.kt              #   소스 타입 enum
 │   │   │   ├── DocumentRepository.kt      #   리포지토리 인터페이스
 │   │   │   ├── ChunkRepository.kt         #   청크 리포지토리 인터페이스
 │   │   │   └── ChunkingStrategy.kt        #   도메인 전략 객체 (청크 분할 순수 로직)
 │   │   ├── application/
 │   │   │   └── DocumentFacade.kt          #   유스케이스 조합 + Repository 호출
 │   │   ├── presentation/
-│   │   │   └── DocumentController.kt      #   REST API (추후 웹 UI용)
+│   │   │   ├── DocumentController.kt      #   REST API (추후 웹 UI용)
+│   │   │   └── dto/
+│   │   │       ├── DocumentIngestRequest.kt   # 문서 입력 요청 DTO
+│   │   │       └── DocumentIngestResponse.kt  # 문서 입력 응답 DTO
 │   │   └── infrastructure/
-│   │       ├── DocumentJpaRepository.kt   #   JPA 구현체
-│   │       ├── PdfParser.kt               #   PDFBox
-│   │       ├── DocxParser.kt              #   Apache POI
-│   │       └── WebPageParser.kt           #   Jsoup
+│   │       ├── PdfParser.kt               #   PDFBox (5단계)
+│   │       ├── DocxParser.kt              #   Apache POI (5단계)
+│   │       └── WebPageParser.kt           #   Jsoup (5단계)
 │   │
 │   ├── embedding/                         # 📂 도메인: 임베딩
 │   │   ├── domain/
-│   │   │   ├── Embedding.kt               #   엔티티/값 객체
 │   │   │   └── EmbeddingClient.kt         #   클라이언트 인터페이스 (DIP)
 │   │   └── infrastructure/
-│   │       └── OpenAiEmbeddingClient.kt   #   OpenAI 임베딩 API 구현체
+│   │       ├── OpenAiEmbeddingClient.kt   #   OpenAI 임베딩 API 구현체
+│   │       └── dto/
+│   │           └── EmbeddingResponse.kt   #   OpenAI 응답 DTO
 │   │
 │   ├── vectorstore/                       # 📂 도메인: 벡터 저장소
 │   │   ├── domain/
-│   │   │   └── VectorStoreRepository.kt   #   리포지토리 인터페이스
+│   │   │   └── VectorStoreRepository.kt   #   리포지토리 인터페이스 + VectorSearchResult
 │   │   └── infrastructure/
-│   │       └── MilvusVectorStore.kt       #   Milvus 연동 구현체
+│   │       └── MilvusVectorStore.kt       #   Milvus SDK 2.6 구현체
 │   │
 │   ├── rag/                               # 📂 도메인: RAG (질의응답)
 │   │   ├── domain/
@@ -213,7 +217,8 @@ rag-document/
 │   │       └── SlackApiClient.kt          #   Slack API 호출
 │   │
 │   └── global/                            # 📂 공통
-│       ├── config/                        #   설정 (OpenAI, Milvus, Slack 등)
+│       ├── config/
+│       │   └── WebClientConfig.kt         #   WebClient 빈 설정
 │       ├── exception/                     #   공통 예외 처리
 │       └── util/                          #   유틸리티
 │
