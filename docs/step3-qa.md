@@ -21,18 +21,6 @@ src/main/kotlin/com/khj/ragdocument/
 
 **패키지**: `com.khj.ragdocument.rag.domain`
 
-#### SearchResult.kt (값 객체)
-
-```kotlin
-data class SearchResult(
-    val chunkId: Long,
-    val content: String,
-    val score: Float,
-    val documentId: Long,
-    val chunkIndex: Int,
-)
-```
-
 #### Answer.kt (값 객체)
 
 ```kotlin
@@ -125,6 +113,21 @@ data class ChatMessage(
 ### 3. RAG Application (Facade)
 
 **패키지**: `com.khj.ragdocument.rag.application`
+
+#### SearchResult.kt (검색 결과 조합 객체)
+
+> Milvus 검색 결과(score)와 청크 데이터(content, documentId, chunkIndex)를 합친 Facade 내부용 객체.
+> 도메인 개념이 아닌 유스케이스 흐름에서 생기는 중간 데이터이므로 Application 레이어에 둔다.
+
+```kotlin
+data class SearchResult(
+    val chunkId: Long,
+    val content: String,
+    val score: Float,
+    val documentId: Long,
+    val chunkIndex: Int,
+)
+```
 
 #### RagFacade.kt
 

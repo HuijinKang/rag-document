@@ -205,10 +205,10 @@ rag-document/
 │   ├── rag/                               # 📂 도메인: RAG (질의응답)
 │   │   ├── domain/
 │   │   │   ├── Answer.kt                  #   답변 값 객체
-│   │   │   ├── SearchResult.kt            #   검색 결과 값 객체
 │   │   │   └── ChatClient.kt             #   채팅 클라이언트 인터페이스 (DIP)
 │   │   ├── application/
-│   │   │   └── RagFacade.kt               #   질문→검색→답변 유스케이스 조합
+│   │   │   ├── RagFacade.kt               #   질문→검색→답변 유스케이스 조합
+│   │   │   └── SearchResult.kt            #   검색 결과 조합 객체 (Facade 내부용)
 │   │   └── infrastructure/
 │   │       └── OpenAiChatClient.kt        #   OpenAI Chat API 구현체
 │   │
