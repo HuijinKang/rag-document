@@ -213,6 +213,8 @@ rag-document/
 │   │       └── OpenAiChatClient.kt        #   OpenAI Chat API 구현체
 │   │
 │   ├── slack/                             # 📂 도메인: Slack 연동
+│   │   ├── application/
+│   │   │   └── SlackFacade.kt             #   Slack 유스케이스 (명령어 파싱, 분기, 응답 포맷팅)
 │   │   ├── presentation/
 │   │   │   └── SlackEventController.kt    #   Slack 이벤트 수신
 │   │   └── infrastructure/

@@ -79,124 +79,130 @@ ngrok http 8080
 
 **패키지**: `com.khj.ragdocument.slack.presentation`
 
+> Presentation은 이벤트 수신, URL 검증, 봇 메시지 필터링, 비동기 위임만 담당한다.
+> 명령어 파싱, 분기, 응답 포맷팅 등 유스케이스 로직은 SlackFacade(Application)에 둔다.
+
 #### SlackEventController.kt
 
 ```kotlin
 @RestController
 @RequestMapping("/slack")
 class SlackEventController(
-    private val documentFacade: DocumentFacade,
-    private val ragFacade: RagFacade,
-    private val slackApiClient: SlackApiClient,
+    private val slackFacade: SlackFacade,
 ) {
 
-    /**
-     * Slack Event API 엔드포인트
-     * - URL 검증 (challenge)
-     * - 메시지 이벤트 처리
-     */
     @PostMapping("/events")
     fun handleEvent(@RequestBody payload: Map<String, Any>): ResponseEntity<Any> {
-
-        // URL 검증 (Slack App 설정 시 최초 1회)
-        if (payload["type"] == "url_verification") {
-            return ResponseEntity.ok(mapOf("challenge" to payload["challenge"]))
-        }
-
-        // 이벤트 처리
-        val event = payload["event"] as? Map<String, Any> ?: return ResponseEntity.ok("ok")
-        val eventType = event["type"] as? String
-        val text = event["text"] as? String ?: ""
-        val channel = event["channel"] as? String ?: return ResponseEntity.ok("ok")
-        val botId = event["bot_id"]  // 봇 자신의 메시지 무시
-
-        if (botId != null) return ResponseEntity.ok("ok")
-
-        // 비동기 처리 (Slack은 3초 내 응답 필요)
-        Thread {
-            try {
-                handleMessage(event, text, channel)
-            } catch (e: Exception) {
-                slackApiClient.sendMessage(channel, "❌ 오류가 발생했습니다: ${e.message}")
-            }
-        }.start()
-
-        return ResponseEntity.ok("ok")
-    }
-
-    private fun handleMessage(event: Map<String, Any>, text: String, channel: String) {
-        // 파일이 포함된 메시지인지 확인
-        val files = event["files"] as? List<Map<String, Any>>
-
-        if (!files.isNullOrEmpty()) {
-            handleFileUpload(files, channel)
-        } else if (text.isNotBlank()) {
-            handleQuestion(text, channel)
-        }
-    }
-
-    private fun handleFileUpload(files: List<Map<String, Any>>, channel: String) {
-        slackApiClient.sendMessage(channel, "📄 문서를 받았습니다. 분석 중...")
-
-        files.forEach { file ->
-            val fileName = file["name"] as? String ?: "unknown"
-            val fileUrl = file["url_private_download"] as? String ?: return@forEach
-            val mimeType = file["mimetype"] as? String ?: ""
-
-            // 파일 다운로드 및 처리는 5단계에서 구현
-            // 현재는 텍스트 기반만 지원
-            slackApiClient.sendMessage(channel, "⚠️ 파일 처리는 아직 지원하지 않습니다. 텍스트를 직접 입력해주세요.")
-        }
-    }
-
-    private fun handleQuestion(text: String, channel: String) {
-        // 명령어 파싱
-        val cleanText = text.replace(Regex("<@[A-Z0-9]+>"), "").trim()  // 멘션 제거
-
-        when {
-            cleanText.startsWith("/doc") -> {
-                // 문서 등록: /doc 제목\n내용
-                val parts = cleanText.removePrefix("/doc").trim().split("\n", limit = 2)
-                val title = parts.getOrElse(0) { "제목 없음" }.trim()
-                val content = parts.getOrElse(1) { "" }.trim()
-
-                if (content.isBlank()) {
-                    slackApiClient.sendMessage(channel, "📝 사용법: `/doc 제목`\\n`내용`")
-                    return
-                }
-
-                slackApiClient.sendMessage(channel, "📄 문서를 분석 중...")
-                val documentId = documentFacade.ingest(title, content, SourceType.TEXT)
-                slackApiClient.sendMessage(channel, "✅ 문서 \"$title\" 분석 완료! (ID: $documentId)\n질문해주세요.")
-            }
-
-            cleanText.startsWith("/url") -> {
-                // URL 등록: /url https://...
-                val url = cleanText.removePrefix("/url").trim()
-                slackApiClient.sendMessage(channel, "⚠️ URL 처리는 5단계에서 구현 예정입니다.")
-            }
-
-            else -> {
-                // 일반 텍스트 → 질문으로 처리
-                slackApiClient.sendMessage(channel, "🔍 문서에서 답변을 검색 중...")
-                val answer = ragFacade.ask(cleanText)
-
-                val sourceText = if (answer.sources.isNotEmpty()) {
-                    "\n\n📚 *출처:*\n" + answer.sources.joinToString("\n") { source ->
-                        "• ${source.documentTitle} (유사도: ${"%.2f".format(source.score)})"
-                    }
-                } else ""
-
-                slackApiClient.sendMessage(channel, answer.content + sourceText)
-            }
-        }
+        val response = slackFacade.handleEvent(payload)
+        return ResponseEntity.ok(response ?: "ok")
     }
 }
 ```
 
 ---
 
-### 2. Slack Infrastructure
+### 2. Slack Application (Facade)
+
+**패키지**: `com.khj.ragdocument.slack.application`
+
+> 명령어 파싱, 분기 처리, Facade 호출, 응답 포맷팅, 메시지 전송을 담당한다.
+
+#### SlackFacade.kt
+
+```kotlin
+@Service
+class SlackFacade(
+    private val documentFacade: DocumentFacade,
+    private val ragFacade: RagFacade,
+    private val slackApiClient: SlackApiClient,
+) {
+
+    fun handleEvent(payload: Map<String, Any>): Map<String, Any?>? {
+        // URL 검증 (Slack App 설정 시 최초 1회)
+        if (payload["type"] == "url_verification") {
+            return mapOf("challenge" to payload["challenge"])
+        }
+
+        val event = payload["event"] as? Map<*, *> ?: return null
+        val text = event["text"] as? String ?: ""
+        val channel = event["channel"] as? String ?: return null
+        val botId = event["bot_id"]
+
+        if (botId != null) return null
+
+        // 비동기 처리 (Slack은 3초 내 응답 필요)
+        Thread {
+            try {
+                processMessage(event, text, channel)
+            } catch (e: Exception) {
+                slackApiClient.sendMessage(channel, "오류가 발생했습니다: ${e.message}")
+            }
+        }.start()
+
+        return null
+    }
+
+    private fun processMessage(event: Map<*, *>, text: String, channel: String) {
+        @Suppress("UNCHECKED_CAST")
+        val files = event["files"] as? List<Map<*, *>>
+
+        if (!files.isNullOrEmpty()) {
+            handleFileUpload(channel)
+        } else if (text.isNotBlank()) {
+            val cleanText = text.replace(Regex("<@[A-Z0-9]+>"), "").trim()
+            routeCommand(cleanText, channel)
+        }
+    }
+
+    private fun handleFileUpload(channel: String) {
+        slackApiClient.sendMessage(channel, "파일 처리는 아직 지원하지 않습니다. 텍스트를 직접 입력해주세요.")
+    }
+
+    private fun routeCommand(text: String, channel: String) {
+        when {
+            text.startsWith("/doc") -> handleDocumentIngest(text, channel)
+            text.startsWith("/url") -> handleUrlIngest(channel)
+            else -> handleQuestion(text, channel)
+        }
+    }
+
+    private fun handleDocumentIngest(text: String, channel: String) {
+        val parts = text.removePrefix("/doc").trim().split("\n", limit = 2)
+        val title = parts.getOrElse(0) { "제목 없음" }.trim()
+        val content = parts.getOrElse(1) { "" }.trim()
+
+        if (content.isBlank()) {
+            slackApiClient.sendMessage(channel, "사용법: /doc 제목\n내용")
+            return
+        }
+
+        slackApiClient.sendMessage(channel, "문서를 분석 중...")
+        val documentId = documentFacade.ingest(title, content, SourceType.TEXT)
+        slackApiClient.sendMessage(channel, "문서 \"$title\" 분석 완료! (ID: $documentId)\n질문해주세요.")
+    }
+
+    private fun handleUrlIngest(channel: String) {
+        slackApiClient.sendMessage(channel, "URL 처리는 5단계에서 구현 예정입니다.")
+    }
+
+    private fun handleQuestion(text: String, channel: String) {
+        slackApiClient.sendMessage(channel, "문서에서 답변을 검색 중...")
+        val answer = ragFacade.ask(text)
+
+        val sourceText = if (answer.sources.isNotEmpty()) {
+            "\n\n*출처:*\n" + answer.sources.joinToString("\n") { source ->
+                "- ${source.documentTitle} (유사도: ${"%.2f".format(source.score)})"
+            }
+        } else ""
+
+        slackApiClient.sendMessage(channel, answer.content + sourceText)
+    }
+}
+```
+
+---
+
+### 3. Slack Infrastructure
 
 **패키지**: `com.khj.ragdocument.slack.infrastructure`
 
@@ -229,7 +235,7 @@ class SlackApiClient(
 
 ---
 
-### 3. Slack Config
+### 4. Slack Config
 
 **패키지**: `com.khj.ragdocument.global.config`
 
